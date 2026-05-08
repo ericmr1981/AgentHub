@@ -1,7 +1,7 @@
 # AgentHub Local Design
 
 Date: 2026-05-08
-Status: Approved draft
+Status: User-approved design draft, pending final spec review
 Scope: Local-first AgentHub for high-frequency, low-token coordination among Codex, Claude Code, OpenClaw, Hermes Agent, and compatible custom agents.
 
 ## Purpose
@@ -17,7 +17,7 @@ The first version focuses on local execution, frequent short updates, reliable h
 - Keep the architecture simple, inspectable, and elegant.
 - Support Codex, Claude Code, OpenClaw, and Hermes Agent as first-class targets.
 - Provide a local monitoring UI for observing agents, tasks, events, handoffs, and health.
-- Preserve full history by default while allowing later compaction and archival.
+- Preserve full history by default while allowing explicit compaction and archival.
 
 ## Non-Goals
 
@@ -223,7 +223,7 @@ Default JSON event shape:
 - `--brief` returns current task state and a small recent-event window.
 - Large content is represented through `refs`, not copied into event bodies.
 - `watch` emits JSONL so agents can consume events incrementally.
-- Compaction produces summaries for old activity while keeping original records unless explicitly archived later.
+- Compaction produces summaries for old activity while keeping original records unless an explicit archive mode is requested.
 
 ## Adapter Profiles
 
@@ -246,8 +246,8 @@ supports_plugin: false
 
 - Codex: direct shell access to the `hub` CLI.
 - Claude Code: Bash/tool access to the `hub` CLI.
-- OpenClaw: exec tool or gateway bridge access to `hub`; later native plugin support is possible.
-- Hermes Agent: persistent shell or plugin access to `hub`; later native plugin support is possible.
+- OpenClaw: exec tool or gateway bridge access to `hub`; native plugin support is a post-MVP extension.
+- Hermes Agent: persistent shell or plugin access to `hub`; native plugin support is a post-MVP extension.
 
 The generic compatibility rule is: if an agent can execute a local command or load a thin plugin, it can participate in AgentHub.
 
@@ -403,7 +403,9 @@ compactions
 - Mutating operations such as `claim` and `handoff accept` must run in transactions.
 - Task claim must be atomic: if two agents claim the same open task, only one succeeds.
 - Inbox reads use cursors so each agent can consume events without relying on large history scans.
+- `inbox pull` advances the agent cursor after successful output by default. `--peek` returns events without advancing the cursor.
 - `watch` should not create a second protocol; it should repeatedly query from the cursor and emit JSONL.
+- `watch` advances the cursor by default for agent consumption. `hub watch --peek` is available for observers and debugging.
 - UI management actions must use the same core service layer as the CLI.
 
 ## Error Handling
@@ -476,13 +478,13 @@ Expected error classes:
 - Write many short local events quickly.
 - Confirm event insertion, timeline query, and watch polling remain responsive enough for local use.
 
-## Open Questions for Implementation Planning
+## Implementation Defaults
 
-- Which Python CLI framework should be used: `argparse`, `click`, or `typer`?
-- Which local UI stack should be used: server-rendered HTML, FastAPI plus vanilla JS, or FastAPI plus a bundled frontend?
-- Should default profiles live as YAML files on disk, in SQLite, or both?
-- What should the initial event throughput target be for the smoke test?
-- Should `watch` commit inbox offsets automatically or default to peek mode until an agent acknowledges events?
+- CLI framework: `typer`, because it gives a clean Python CLI with typed command handlers and readable help output.
+- Local UI stack: FastAPI with server-rendered HTML, scoped CSS, and minimal vanilla JavaScript for polling and timeline updates.
+- Profile storage: packaged default profiles are loaded by `hub init`; active profile records live in SQLite so the database remains the local source of truth.
+- Initial load target: a smoke test should insert `1,000` short events and keep timeline queries responsive under normal local development conditions.
+- Cursor behavior: `pull` and `watch` advance cursors by default after successful output; `--peek` is available whenever a caller needs non-consuming reads.
 
 ## Recommended First Implementation Slice
 
