@@ -158,6 +158,10 @@ def create_app(paths: HubPaths) -> FastAPI:
         except HubError as exc:
             return HTMLResponse(content=f"<h1>Error</h1><p>{exc.message}</p>", status_code=500)
 
+    @app.get("/onboarding", response_class=HTMLResponse)
+    def onboarding_page(request: Request):
+        return templates.TemplateResponse(request, "onboarding.html", {})
+
     return app
 
 
