@@ -68,28 +68,34 @@ def watch(
     workspace: Path = typer.Option(Path("."), "--workspace"),
 ) -> None:
     """Watch inbox events as JSONL."""
-    seconds = _parse_interval_seconds(interval)
-    while True:
-        try:
-            payload = service_for(workspace).pull_inbox(agent, limit=100, since=None, peek=peek)
-        except HubError as exc:
-            handle_error(exc)
-            return
-        if format == "jsonl":
-            echo_jsonl(payload["events"])
-        else:
-            echo_json(payload)
-        if once:
-            return
-        time.sleep(seconds)
+    seconds = _parse_interval_seconds(interval) if not once else 0
+    try:
+        while True:
+            try:
+                payload = service_for(workspace).pull_inbox(agent, limit=100, since=None, peek=peek)
+            except HubError as exc:
+                handle_error(exc)
+                return
+            if format == "jsonl":
+                echo_jsonl(payload["events"])
+            else:
+                echo_json(payload)
+            if once:
+                return
+            time.sleep(seconds)
+    except KeyboardInterrupt:
+        return
 
 
 def _parse_interval_seconds(value: str) -> float:
-    if value.endswith("ms"):
-        return max(float(value[:-2]) / 1000, 0.05)
-    if value.endswith("s"):
-        return max(float(value[:-1]), 0.05)
-    return max(float(value), 0.05)
+    try:
+        if value.endswith("ms"):
+            return max(float(value[:-2]) / 1000, 0.05)
+        if value.endswith("s"):
+            return max(float(value[:-1]), 0.05)
+        return max(float(value), 0.05)
+    except ValueError:
+        raise HubError("INVALID_INTERVAL", f"Invalid interval value: {value!r}", "Expected format: a number with optional ms or s suffix (e.g. 500ms, 5s, 2)")
 
 
 @app.command()
