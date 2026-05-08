@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">local control tower</p>
+  <h1>Handoffs</h1>
+  <p class="lede">Task transfers between agents.</p>
+  <nav class="nav-bar">
+    <a href="/">Radar</a>
+    <a href="/handoffs" class="active">Handoffs</a>
+    <a href="/health">Health</a>
+  </nav>
+</section>
+
+<section class="panel">
+  <div class="table">
+    <div class="row header">
+      <span>ID</span><span>Task</span><span>From</span><span>To</span><span>Reason</span><span>Status</span>
+    </div>
+    {% for h in handoffs %}
+    <div class="row">
+      <span class="mono">{{ h.id }}</span>
+      <span class="mono">{{ h.task_id }}</span>
+      <span>{{ h.from_agent_id }}</span>
+      <span>{{ h.to_agent_id }}</span>
+      <span>{{ h.reason }}</span>
+      <span class="pill">{{ h.status }}</span>
+    </div>
+    {% else %}
+    <div class="row"><span>No handoffs yet.</span></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

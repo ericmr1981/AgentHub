@@ -4,6 +4,11 @@
   <p class="eyebrow">local control tower</p>
   <h1>AgentHub Radar</h1>
   <p class="lede">A compact view of local agent coordination, task ownership, and event flow.</p>
+  <nav class="nav-bar">
+    <a href="/" class="active">Radar</a>
+    <a href="/handoffs">Handoffs</a>
+    <a href="/health">Health</a>
+  </nav>
 </section>
 
 <section class="radar-grid">
@@ -23,6 +28,9 @@
         <span>{{ task.title }}</span>
         <span class="pill">{{ task.status }}</span>
         <span>{{ task.owner_agent_id or "unowned" }}</span>
+        {% if task.status in ("claimed", "blocked", "open") %}
+        <button class="btn btn-close" data-task="{{ task.id }}" data-agent="{{ task.owner_agent_id or '' }}">close</button>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -42,4 +50,17 @@
     </div>
   </article>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.btn-close').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var taskId = this.dataset.task;
+    fetch('/api/tasks/' + taskId + '/close', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({summary: 'closed via UI'}) })
+      .then(function(r) { return r.json(); })
+      .then(function() { location.reload(); });
+  });
+});
+</script>
 {% endblock %}

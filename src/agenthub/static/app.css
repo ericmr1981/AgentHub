@@ -83,6 +83,33 @@ h2 { font-size: 1rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .mono { color: var(--muted); font-family: "IBM Plex Mono", monospace; }
 .pill { color: var(--graphite); background: var(--signal); border-radius: 999px; padding: 3px 8px; text-align: center; }
 
+.nav-bar { display: flex; gap: 8px; margin-top: 16px; }
+.nav-bar a {
+  color: var(--muted);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+}
+.nav-bar a.active, .nav-bar a:hover { color: var(--signal); border-color: var(--signal); }
+
+.btn {
+  background: var(--panel-strong);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--fog);
+  cursor: pointer;
+  font-family: "IBM Plex Mono", monospace;
+  padding: 4px 10px;
+}
+.btn:hover { background: var(--signal); color: var(--graphite); }
+.btn-close { font-size: 0.72rem; }
+
+.row.header { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; }
+.mono-sm { font-size: 0.78rem; }
+
 @media (max-width: 820px) {
   .radar-grid, .panel-grid { grid-template-columns: 1fr; }
   .row, .event { grid-template-columns: 1fr; }
