@@ -38,11 +38,16 @@ hub task claim T000001 --agent <agent_id>
 # 4. 干活，同步进展
 hub event push --task T000001 --agent <agent_id> --type status --body "做了什么"
 
-# 5. 完成后关闭
-hub task close T000001 --agent <agent_id> --summary "完成了什么"
-
-# 6. 或者移交给其他人
+# 5. 或者移交给其他人（事件 body 会包含 handoff ID）
 hub handoff create T000001 --from <agent_id> --to claude-code --reason "需要 review"
+
+# 在收件箱里看到 handoff 事件后，直接用 body 中的 handoff ID 接受
+hub inbox pull --agent <agent_id> --limit 5 --format jsonl
+# 返回类似: {"type":"handoff","body":"handoff H000001 to alpha: 需要 review",...}
+hub handoff accept H000001 --agent <agent_id>
+
+# 6. 完成后关闭
+hub task close T000001 --agent <agent_id> --summary "完成了什么"
 ```
 
 ## 消息规则
