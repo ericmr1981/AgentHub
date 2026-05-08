@@ -167,11 +167,13 @@ class HubService:
     ) -> dict[str, Any]:
         if event_type not in EVENT_TYPES:
             raise HubError("INVALID_EVENT_TYPE", f"Event type {event_type} is invalid", f"Use one of {sorted(EVENT_TYPES)}.")
-        agent = self.show_agent(agent_id)
-        profile = get_profile(agent["profile_name"])
-        if len(body) > profile.event_body_budget_chars:
-            raise HubError("BODY_TOO_LARGE", f"Event body is {len(body)} characters", f"Keep body under {profile.event_body_budget_chars} characters and move details into refs.")
         with connect(self.paths) as conn:
+            agent = conn.execute("select id, profile_name from agents where id = ?", (agent_id,)).fetchone()
+            if agent is None:
+                raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Register the agent first.")
+            profile = get_profile(agent["profile_name"])
+            if len(body) > profile.event_body_budget_chars:
+                raise HubError("BODY_TOO_LARGE", f"Event body is {len(body)} characters", f"Keep body under {profile.event_body_budget_chars} characters and move details into refs.")
             if task_id is not None:
                 task = conn.execute("select id from tasks where id = ?", (task_id,)).fetchone()
                 if task is None:
@@ -186,8 +188,10 @@ class HubService:
         since: int | None,
         peek: bool,
     ) -> dict[str, Any]:
-        self.show_agent(agent_id)
         with connect(self.paths) as conn:
+            agent = conn.execute("select id from agents where id = ?", (agent_id,)).fetchone()
+            if agent is None:
+                raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Register the agent first.")
             if since is None:
                 offset = conn.execute("select last_cursor from inbox_offsets where agent_id = ?", (agent_id,)).fetchone()
                 start_cursor = 0 if offset is None else int(offset["last_cursor"])
