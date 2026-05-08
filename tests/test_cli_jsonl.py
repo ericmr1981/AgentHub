@@ -46,3 +46,26 @@ def test_brief_cli_outputs_profile_help(runner):
     assert result.exit_code == 0
     assert "AgentHub brief for codex" in result.stdout
     assert "hub inbox pull --agent codex" in result.stdout
+
+
+def test_task_create_claim_and_show_cli(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+
+    created = runner.invoke([
+        "task", "create",
+        "--title", "Wire CLI",
+        "--intent", "Build first path",
+        "--workspace", str(hub_home),
+    ])
+    assert created.exit_code == 0
+    task = json.loads(created.stdout)
+    assert task["id"] == "T000001"
+
+    claimed = runner.invoke(["task", "claim", "T000001", "--agent", "codex", "--workspace", str(hub_home)])
+    assert claimed.exit_code == 0
+    assert json.loads(claimed.stdout)["owner_agent_id"] == "codex"
+
+    shown = runner.invoke(["task", "show", "T000001", "--brief", "--workspace", str(hub_home)])
+    assert shown.exit_code == 0
+    assert json.loads(shown.stdout)["recent_events"][0]["type"] == "claim"

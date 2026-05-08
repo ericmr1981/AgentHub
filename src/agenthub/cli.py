@@ -146,15 +146,63 @@ def agent_show(
 
 
 @task_app.command("create")
-def task_create() -> None:
+def task_create(
+    title: str = typer.Option(..., "--title"),
+    intent: str = typer.Option(..., "--intent"),
+    priority: str = typer.Option("normal", "--priority"),
+    ref: list[str] = typer.Option([], "--ref"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """Create a new task card."""
-    typer.echo("task create is not implemented yet")
+    refs = [{"kind": "file", "uri": item, "summary": ""} for item in ref]
+    try:
+        echo_json(service_for(workspace).create_task(title, intent, priority, refs))
+    except HubError as exc:
+        handle_error(exc)
 
 
 @task_app.command("list")
-def task_list() -> None:
+def task_list(
+    status: str | None = typer.Option(None, "--status"),
+    format: str = typer.Option("jsonl", "--format"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """List task cards."""
-    typer.echo("task list is not implemented yet")
+    try:
+        rows = service_for(workspace).list_tasks(status=status)
+    except HubError as exc:
+        handle_error(exc)
+        return
+    if format == "jsonl":
+        echo_jsonl(rows)
+    else:
+        echo_json(rows)
+
+
+@task_app.command("show")
+def task_show(
+    task_id: str,
+    brief: bool = typer.Option(False, "--brief"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Show task details."""
+    try:
+        echo_json(service_for(workspace).show_task(task_id, brief=brief))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@task_app.command("claim")
+def task_claim(
+    task_id: str,
+    agent: str = typer.Option(..., "--agent"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Claim ownership of a task."""
+    try:
+        echo_json(service_for(workspace).claim_task(task_id, agent))
+    except HubError as exc:
+        handle_error(exc)
 
 
 @event_app.command("push")
