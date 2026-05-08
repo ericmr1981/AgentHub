@@ -63,12 +63,6 @@ class HubService:
             raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Run hub agent list.")
         return dict(row)
 
-    def _next_public_id(self, table: str, prefix: str) -> str:
-        with connect(self.paths) as conn:
-            row = conn.execute(f"select seq from sqlite_sequence where name = ?", (table,)).fetchone()
-            next_number = 1 if row is None else int(row["seq"]) + 1
-        return f"{prefix}{next_number:06d}"
-
     def create_task(self, title: str, intent: str, priority: str, refs: list[dict[str, str]]) -> dict[str, Any]:
         now = utc_now()
         with connect(self.paths) as conn:
