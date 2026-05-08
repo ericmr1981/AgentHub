@@ -93,6 +93,21 @@ def test_event_push_and_inbox_pull_cli(runner, hub_home):
     assert rows[0]["body"] == "schema done"
 
 
+def test_task_block_and_close_cli(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["task", "create", "--title", "Block", "--intent", "Test", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["task", "claim", "T000001", "--agent", "codex", "--workspace", str(hub_home)]).exit_code == 0
+
+    blocked = runner.invoke(["task", "block", "T000001", "--agent", "codex", "--reason", "needs schema", "--workspace", str(hub_home)])
+    assert blocked.exit_code == 0
+    assert json.loads(blocked.stdout)["status"] == "blocked"
+
+    closed = runner.invoke(["task", "close", "T000001", "--agent", "codex", "--summary", "done", "--workspace", str(hub_home)])
+    assert closed.exit_code == 0
+    assert json.loads(closed.stdout)["status"] == "done"
+
+
 def test_watch_cli_can_run_once_for_tests(runner, hub_home):
     assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
     assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0

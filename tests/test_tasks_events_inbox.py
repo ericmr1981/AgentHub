@@ -73,3 +73,34 @@ def test_event_body_budget_is_enforced(service):
         service.push_event(task["id"], "codex", "status", long_body, [])
 
     assert exc.value.code == "BODY_TOO_LARGE"
+
+
+def test_block_task_creates_blocked_event(service):
+    task = service.create_task("Block", "Test block", "normal", [])
+    service.claim_task(task["id"], "codex")
+    blocked = service.block_task(task["id"], "codex", "needs schema")
+
+    assert blocked["status"] == "blocked"
+    assert blocked["summary"] == "needs schema"
+
+    shown = service.show_task(task["id"], brief=True)
+    assert shown["recent_events"][-1]["type"] == "blocked"
+
+
+def test_close_task_marks_done_and_sets_summary(service):
+    task = service.create_task("Close", "Test close", "normal", [])
+    service.claim_task(task["id"], "codex")
+    closed = service.close_task(task["id"], "codex", "implemented CLI")
+
+    assert closed["status"] == "done"
+    assert closed["summary"] == "implemented CLI"
+    assert closed["closed_at"] is not None
+
+
+def test_reassign_task_changes_owner(service):
+    task = service.create_task("Reassign", "Test reassign", "normal", [])
+    service.claim_task(task["id"], "codex")
+    reassigned = service.reassign_task(task["id"], "claude-code")
+
+    assert reassigned["owner_agent_id"] == "claude-code"
+    assert reassigned["status"] == "claimed"

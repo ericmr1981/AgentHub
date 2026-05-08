@@ -242,6 +242,54 @@ class HubService:
             "timeline": list(reversed(timeline)),
         }
 
+    def block_task(self, task_id: str, agent_id: str, reason: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            result = conn.execute(
+                "update tasks set status = 'blocked', summary = ?, updated_at = ? where id = ? and status in ('claimed', 'open')",
+                (reason, now, task_id),
+            )
+            if result.rowcount == 0:
+                existing = conn.execute("select status from tasks where id = ?", (task_id,)).fetchone()
+                if existing is None:
+                    raise HubError("TASK_NOT_FOUND", f"Task {task_id} was not found", "Run hub task list.")
+                raise HubError("TASK_NOT_CLAIMABLE", f"Task {task_id} is {existing['status']}, can only block claimed or open tasks", "")
+            self._insert_event(conn, task_id, "blocked", agent_id, reason, [])
+        return self.show_task(task_id, brief=False)
+
+    def close_task(self, task_id: str, agent_id: str, summary: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            result = conn.execute(
+                "update tasks set status = 'done', summary = ?, closed_at = ?, updated_at = ? where id = ? and status != 'done' and status != 'archived'",
+                (summary, now, now, task_id),
+            )
+            if result.rowcount == 0:
+                existing = conn.execute("select status from tasks where id = ?", (task_id,)).fetchone()
+                if existing is None:
+                    raise HubError("TASK_NOT_FOUND", f"Task {task_id} was not found", "Run hub task list.")
+                raise HubError("TASK_ALREADY_CLOSED", f"Task {task_id} is already {existing['status']}", "")
+            self._insert_event(conn, task_id, "note", agent_id, f"completed: {summary}", [])
+        return self.show_task(task_id, brief=False)
+
+    def reassign_task(self, task_id: str, new_agent_id: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            agent = conn.execute("select id from agents where id = ?", (new_agent_id,)).fetchone()
+            if agent is None:
+                raise HubError("AGENT_NOT_FOUND", f"Agent {new_agent_id} was not found", "Register the agent first.")
+            result = conn.execute(
+                "update tasks set owner_agent_id = ?, updated_at = ? where id = ? and status in ('claimed', 'blocked')",
+                (new_agent_id, now, task_id),
+            )
+            if result.rowcount == 0:
+                existing = conn.execute("select status from tasks where id = ?", (task_id,)).fetchone()
+                if existing is None:
+                    raise HubError("TASK_NOT_FOUND", f"Task {task_id} was not found", "Run hub task list.")
+                raise HubError("TASK_NOT_REASSIGNABLE", f"Task {task_id} is {existing['status']}, can only reassign claimed or blocked tasks", "")
+            self._insert_event(conn, task_id, "handoff", new_agent_id, f"reassigned to {new_agent_id}", [])
+        return self.show_task(task_id, brief=False)
+
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
         with connect(self.paths) as conn:

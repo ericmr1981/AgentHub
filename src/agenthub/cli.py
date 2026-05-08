@@ -245,6 +245,34 @@ def task_claim(
         handle_error(exc)
 
 
+@task_app.command("block")
+def task_block(
+    task_id: str,
+    agent: str = typer.Option(..., "--agent"),
+    reason: str = typer.Option(..., "--reason"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Mark a task as blocked with a reason."""
+    try:
+        echo_json(service_for(workspace).block_task(task_id, agent, reason))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@task_app.command("close")
+def task_close(
+    task_id: str,
+    agent: str = typer.Option(..., "--agent"),
+    summary: str = typer.Option(..., "--summary"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Close a task with a completion summary."""
+    try:
+        echo_json(service_for(workspace).close_task(task_id, agent, summary))
+    except HubError as exc:
+        handle_error(exc)
+
+
 @event_app.command("push")
 def event_push(
     task: str | None = typer.Option(None, "--task"),
