@@ -90,6 +90,7 @@ def connect(paths: HubPaths) -> Iterator[sqlite3.Connection]:
     paths.hub_dir.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(paths.db_path))
     conn.row_factory = sqlite3.Row
+    conn.execute("pragma journal_mode = wal")
     conn.execute("pragma foreign_keys = on")
     conn.execute("pragma busy_timeout = 5000")
     try:
@@ -103,7 +104,5 @@ def connect(paths: HubPaths) -> Iterator[sqlite3.Connection]:
 
 
 def init_db(paths: HubPaths) -> None:
-    paths.hub_dir.mkdir(parents=True, exist_ok=True)
     with connect(paths) as conn:
-        conn.execute("pragma journal_mode = wal")
         conn.executescript(SCHEMA)
