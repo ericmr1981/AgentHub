@@ -9,6 +9,7 @@ import typer
 
 from agenthub import __version__
 from agenthub.config import HubPaths
+from agenthub.ui import run_ui
 from agenthub.db import init_db
 from agenthub.errors import HubError
 from agenthub.profiles import build_brief
@@ -99,9 +100,13 @@ def _parse_interval_seconds(value: str) -> float:
 
 
 @app.command()
-def ui() -> None:
+def ui(
+    host: str = typer.Option("127.0.0.1", "--host"),
+    port: int = typer.Option(8765, "--port"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """Start the local monitor UI."""
-    typer.echo("ui is not implemented yet")
+    run_ui(HubPaths.from_workspace(workspace), host=host, port=port)
 
 
 @app.command()

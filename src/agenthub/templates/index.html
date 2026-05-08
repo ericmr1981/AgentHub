@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">local control tower</p>
+  <h1>AgentHub Radar</h1>
+  <p class="lede">A compact view of local agent coordination, task ownership, and event flow.</p>
+</section>
+
+<section class="radar-grid">
+  <article class="metric"><span>Total Agents</span><strong>{{ snapshot.radar.agents_total }}</strong></article>
+  <article class="metric"><span>Active</span><strong>{{ snapshot.radar.agents_active }}</strong></article>
+  <article class="metric warning"><span>Blocked Tasks</span><strong>{{ snapshot.radar.tasks_blocked }}</strong></article>
+  <article class="metric"><span>Recent Events</span><strong>{{ snapshot.radar.events_recent }}</strong></article>
+</section>
+
+<section class="panel-grid">
+  <article class="panel">
+    <h2>Tasks</h2>
+    <div class="table">
+      {% for task in snapshot.tasks %}
+      <div class="row">
+        <span class="mono">{{ task.id }}</span>
+        <span>{{ task.title }}</span>
+        <span class="pill">{{ task.status }}</span>
+        <span>{{ task.owner_agent_id or "unowned" }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <h2>Timeline</h2>
+    <div class="timeline">
+      {% for event in snapshot.timeline %}
+      <div class="event">
+        <span class="mono">{{ event.id }}</span>
+        <strong>{{ event.type }}</strong>
+        <span>{{ event.by_agent_id }}</span>
+        <p>{{ event.body }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}
