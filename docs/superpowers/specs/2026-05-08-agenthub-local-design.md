@@ -146,6 +146,8 @@ Creates `.agenthub/hub.db`, default profiles, and any required local directories
 ```bash
 hub agent register codex --profile codex
 hub agent heartbeat codex --status active
+hub agent list --format jsonl
+hub agent show codex --format json
 hub agent pause codex
 hub agent resume codex
 ```
@@ -250,6 +252,52 @@ supports_plugin: false
 - Hermes Agent: persistent shell or plugin access to `hub`; native plugin support is a post-MVP extension.
 
 The generic compatibility rule is: if an agent can execute a local command or load a thin plugin, it can participate in AgentHub.
+
+## Agent Onboarding Contract
+
+AgentHub should be self-explanatory to a new agent with minimal prompt or token cost. An agent should not need to read the full design spec before participating.
+
+### Discovery Commands
+
+```bash
+hub brief --agent codex --format md
+hub brief --agent codex --format json
+hub doctor --agent codex --format json
+hub agent list --format jsonl
+hub task list --status open --format jsonl
+```
+
+`hub brief` returns a compact usage guide tailored to the agent profile. It should include:
+
+- Agent identity and profile name.
+- The event body budget.
+- The recommended pull or watch command.
+- The allowed event types.
+- The most important task commands.
+- The low-token rule: put large content in refs, not event bodies.
+- One minimal create-claim-status-handoff example.
+
+`hub doctor --agent <id>` validates whether the agent is registered, whether the database exists, whether the profile is known, and whether the agent has a recent heartbeat.
+
+### Minimal Agent Prompt
+
+Each default profile should include a short prompt snippet that can be shown to an agent when connecting it to Hub:
+
+```text
+You coordinate through AgentHub. Use short structured events, keep bodies under 280 characters, and put large content in refs. Pull your inbox with `hub inbox pull --agent <id> --limit 10 --format jsonl`. Claim work before editing, publish status events as you progress, and use handoff when another agent should continue.
+```
+
+### Agent Discovery Model
+
+Agents discover other agents through Hub state, not through direct peer-to-peer chat:
+
+- `hub agent list` shows known agents, profiles, status, and recent heartbeat age.
+- `heartbeat` tells whether an agent is active, idle, paused, or stale.
+- `task owner` shows who currently owns work.
+- `events` show recent activity by other agents.
+- `handoffs` explicitly target another agent when transfer is needed.
+
+This keeps peer awareness cheap. Agents only load the peers relevant to their current task or inbox instead of carrying a full roster in every prompt.
 
 ## Monitor UI
 
