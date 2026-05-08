@@ -216,6 +216,32 @@ class HubService:
                 )
         return {"agent_id": agent_id, "last_cursor": last_cursor, "events": events}
 
+    def dashboard_snapshot(self) -> dict[str, Any]:
+        with connect(self.paths) as conn:
+            agents = [dict(row) for row in conn.execute(
+                "select id, display_name, profile_name, status, last_seen_at from agents order by id"
+            ).fetchall()]
+            tasks = [dict(row) for row in conn.execute(
+                "select id, title, intent, status, owner_agent_id, priority, created_at, updated_at, refs_json from tasks order by pk desc limit 100"
+            ).fetchall()]
+            timeline = [dict(row) for row in conn.execute(
+                "select id, task_id, type, by_agent_id, body, refs_json, cursor, created_at from events order by cursor desc limit 100"
+            ).fetchall()]
+            handoffs_pending = conn.execute("select count(*) from handoffs where status = 'pending'").fetchone()[0]
+        return {
+            "radar": {
+                "agents_total": len(agents),
+                "agents_active": sum(1 for agent in agents if agent["status"] == "active"),
+                "agents_paused": sum(1 for agent in agents if agent["status"] == "paused"),
+                "tasks_blocked": sum(1 for task in tasks if task["status"] == "blocked"),
+                "handoffs_pending": handoffs_pending,
+                "events_recent": len(timeline),
+            },
+            "agents": agents,
+            "tasks": tasks,
+            "timeline": list(reversed(timeline)),
+        }
+
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
         with connect(self.paths) as conn:
