@@ -108,9 +108,17 @@ from typer.testing import CliRunner
 from agenthub.cli import app
 
 
+class HubCliRunner:
+    def __init__(self) -> None:
+        self._runner = CliRunner()
+
+    def invoke(self, args: list[str]):
+        return self._runner.invoke(app, args)
+
+
 @pytest.fixture()
-def runner() -> CliRunner:
-    return CliRunner()
+def runner() -> HubCliRunner:
+    return HubCliRunner()
 
 
 @pytest.fixture()
@@ -200,7 +208,7 @@ testpaths = ["tests"]
 
 Create `README.md`:
 
-```markdown
+````markdown
 # AgentHub
 
 AgentHub is a local-first coordination hub for multiple agents. It uses short structured events, task cards, artifact references, and a local monitor UI.
@@ -214,7 +222,7 @@ hub agent heartbeat codex --status active
 hub task create --title "Wire CLI" --intent "Build the first CLI path" --priority normal
 hub task list --format jsonl
 ```
-```
+````
 
 - [ ] **Step 4: Create minimal CLI app**
 
@@ -899,9 +907,8 @@ class HubService:
                 values (?, ?, ?, 'idle', ?, ?)
                 on conflict(id) do update set
                     display_name = excluded.display_name,
-                    profile_name = excluded.profile_name,
-                    updated_at = updated_at
-                """.replace(",\n                    updated_at = updated_at", ""),
+                    profile_name = excluded.profile_name
+                """,
                 (agent_id, profile.display_name, profile_name, now, dumps_json({})),
             )
             conn.execute(
@@ -2220,7 +2227,7 @@ Expected: PASS in under 10 seconds on a normal local machine. If it fails becaus
 
 Replace `README.md` with:
 
-```markdown
+````markdown
 # AgentHub
 
 AgentHub is a local-first coordination hub for multiple agents. It uses short structured events, task cards, artifact references, and a local monitor UI.
@@ -2263,7 +2270,7 @@ Open the monitor at `http://127.0.0.1:8765`.
 - `claude-code`
 - `openclaw`
 - `hermes`
-```
+````
 
 - [ ] **Step 4: Run full tests**
 
@@ -2357,3 +2364,39 @@ git commit -m "fix: complete AgentHub MVP verification"
 ```
 
 If no changes were required, do not create an empty commit.
+
+---
+
+## Plan Self-Review
+
+### Spec Coverage
+
+This plan covers the first implementation slice from the design spec:
+
+- SQLite source of truth in `.agenthub/hub.db`.
+- Python package and `hub` console script.
+- `hub init`.
+- Default profiles for `codex`, `claude-code`, `openclaw`, and `hermes`.
+- `hub brief` and `hub doctor` for low-token agent onboarding.
+- Agent registry discovery through `register`, `heartbeat`, `list`, and `show`.
+- Task creation, listing, showing, and atomic claim.
+- Short structured event push with body budget validation.
+- Cursor-based inbox pull with consuming and `--peek` behavior.
+- `watch` as a polling wrapper over inbox pull.
+- Read-only monitor UI with Radar, Tasks, and Timeline.
+- Load smoke coverage for `1,000` short events.
+
+### Intentionally Deferred
+
+These spec items are post-MVP and should get separate implementation plans:
+
+- `hub task block`, `hub task close`, and task reassignment.
+- `hub handoff` and `hub handoff accept`.
+- `hub compact` and archival modes.
+- UI management actions such as pause, resume, reassign, close, and compact preview.
+- Native OpenClaw and Hermes plugins.
+- Richer stale-agent detection based on heartbeat age.
+
+### Placeholder Scan
+
+The plan must contain no unresolved marker text or vague testing steps. Every code-changing step includes concrete file content or exact code blocks, and every verification step includes an exact command and expected result.
