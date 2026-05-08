@@ -11,13 +11,11 @@ class HubError(Exception):
     hint: str | None = None
 
     def to_payload(self) -> dict[str, Any]:
-        payload: dict[str, Any] = {
+        return {
             "ok": False,
             "error": {
                 "code": self.code,
                 "message": self.message,
+                **({"hint": self.hint} if self.hint else {}),
             },
         }
-        if self.hint:
-            payload["error"]["hint"] = self.hint
-        return payload

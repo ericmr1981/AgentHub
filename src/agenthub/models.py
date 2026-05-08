@@ -12,7 +12,7 @@ HANDOFF_STATUSES = {"pending", "accepted", "stale"}
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def dumps_json(value: Any) -> str:
@@ -20,7 +20,7 @@ def dumps_json(value: Any) -> str:
 
 
 def loads_json(value: str | None, default: Any) -> Any:
-    if not value:
+    if value is None:
         return default
     return json.loads(value)
 

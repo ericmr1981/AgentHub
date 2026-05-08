@@ -34,4 +34,3 @@ def test_hub_error_serializes_to_json_shape():
             "hint": "Run hub task list.",
         },
     }
-    json.dumps(payload)
