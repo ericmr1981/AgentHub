@@ -42,21 +42,37 @@ def ui() -> None:
 
 @agent_app.command("register")
 def agent_register() -> None:
+    """Register an agent in the hub."""
     typer.echo("agent register is not implemented yet")
+
+
+@agent_app.command("heartbeat")
+def agent_heartbeat() -> None:
+    """Send a heartbeat for an agent."""
+    typer.echo("agent heartbeat is not implemented yet")
+
+
+@task_app.command("create")
+def task_create() -> None:
+    """Create a new task card."""
+    typer.echo("task create is not implemented yet")
 
 
 @task_app.command("list")
 def task_list() -> None:
+    """List task cards."""
     typer.echo("task list is not implemented yet")
 
 
 @event_app.command("push")
 def event_push() -> None:
+    """Push a short coordination event."""
     typer.echo("event push is not implemented yet")
 
 
 @inbox_app.command("pull")
 def inbox_pull() -> None:
+    """Pull agent inbox events."""
     typer.echo("inbox pull is not implemented yet")
 
 
