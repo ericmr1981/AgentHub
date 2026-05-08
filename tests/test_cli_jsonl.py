@@ -91,3 +91,24 @@ def test_event_push_and_inbox_pull_cli(runner, hub_home):
     assert pulled.exit_code == 0
     rows = [json.loads(line) for line in pulled.stdout.splitlines()]
     assert rows[0]["body"] == "schema done"
+
+
+def test_watch_cli_can_run_once_for_tests(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "claude-code", "--profile", "claude-code", "--workspace", str(hub_home)]).exit_code == 0
+    created = runner.invoke([
+        "task", "create", "--title", "Watch", "--intent", "Test", "--workspace", str(hub_home)
+    ])
+    task_id = json.loads(created.stdout)["id"]
+    assert runner.invoke([
+        "event", "push", "--task", task_id, "--agent", "codex", "--type", "status", "--body", "watch me", "--workspace", str(hub_home)
+    ]).exit_code == 0
+
+    watched = runner.invoke([
+        "watch", "--agent", "claude-code", "--once", "--workspace", str(hub_home)
+    ])
+
+    assert watched.exit_code == 0
+    rows = [json.loads(line) for line in watched.stdout.splitlines()]
+    assert rows[0]["body"] == "watch me"

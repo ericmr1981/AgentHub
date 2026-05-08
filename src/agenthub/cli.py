@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -58,9 +59,37 @@ def init(workspace: Path = typer.Option(Path("."), "--workspace", help="Workspac
 
 
 @app.command()
-def watch() -> None:
+def watch(
+    agent: str = typer.Option(..., "--agent"),
+    interval: str = typer.Option("1s", "--interval"),
+    format: str = typer.Option("jsonl", "--format"),
+    peek: bool = typer.Option(False, "--peek"),
+    once: bool = typer.Option(False, "--once", help="Run one polling iteration, useful for tests."),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """Watch inbox events as JSONL."""
-    typer.echo("watch is not implemented yet")
+    seconds = _parse_interval_seconds(interval)
+    while True:
+        try:
+            payload = service_for(workspace).pull_inbox(agent, limit=100, since=None, peek=peek)
+        except HubError as exc:
+            handle_error(exc)
+            return
+        if format == "jsonl":
+            echo_jsonl(payload["events"])
+        else:
+            echo_json(payload)
+        if once:
+            return
+        time.sleep(seconds)
+
+
+def _parse_interval_seconds(value: str) -> float:
+    if value.endswith("ms"):
+        return max(float(value[:-2]) / 1000, 0.05)
+    if value.endswith("s"):
+        return max(float(value[:-1]), 0.05)
+    return max(float(value), 0.05)
 
 
 @app.command()
