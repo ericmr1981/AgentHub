@@ -84,7 +84,10 @@ def brief(agent: str = typer.Option(..., "--agent"), format: str = typer.Option(
 @app.command()
 def doctor(agent: str = typer.Option(..., "--agent"), workspace: Path = typer.Option(Path("."), "--workspace")) -> None:
     """Validate agent registration and health."""
-    echo_json(service_for(workspace).doctor_agent(agent))
+    try:
+        echo_json(service_for(workspace).doctor_agent(agent))
+    except HubError as exc:
+        handle_error(exc)
 
 
 @agent_app.command("register")
@@ -119,7 +122,11 @@ def agent_list(
     workspace: Path = typer.Option(Path("."), "--workspace"),
 ) -> None:
     """List registered agents."""
-    rows = service_for(workspace).list_agents()
+    try:
+        rows = service_for(workspace).list_agents()
+    except HubError as exc:
+        handle_error(exc)
+        return
     if format == "jsonl":
         echo_jsonl(rows)
     else:

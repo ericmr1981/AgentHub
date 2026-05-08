@@ -65,12 +65,13 @@ class HubService:
 
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
-        try:
-            agent = self.show_agent(agent_id)
-            registered = True
-        except HubError:
-            agent = None
-            registered = False
+        with connect(self.paths) as conn:
+            row = conn.execute(
+                "select id, display_name, profile_name, status, last_seen_at, metadata_json from agents where id = ?",
+                (agent_id,),
+            ).fetchone()
+        agent = dict(row) if row else None
+        registered = agent is not None
         profile_ok = bool(agent and agent["profile_name"])
         heartbeat_ok = bool(agent and agent["last_seen_at"])
         return {

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 
 def test_version_command_outputs_version(runner):
     result = runner.invoke(["version"])
@@ -19,9 +21,6 @@ def test_root_help_lists_core_commands(runner):
     assert "inbox" in result.stdout
     assert "watch" in result.stdout
     assert "ui" in result.stdout
-
-
-import json
 
 
 def test_agent_register_and_list_cli(runner, hub_home):
