@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 
 from agenthub import __version__
+from agenthub.config import HubPaths
+from agenthub.db import init_db
 
 app = typer.Typer(no_args_is_help=True, help="Local-first coordination hub for agents.")
 agent_app = typer.Typer(help="Manage agent registry and heartbeats.")
@@ -23,9 +27,11 @@ def version() -> None:
 
 
 @app.command()
-def init() -> None:
+def init(workspace: Path = typer.Option(Path("."), "--workspace", help="Workspace root for .agenthub.")) -> None:
     """Initialize a local AgentHub database."""
-    typer.echo("init is not implemented yet")
+    paths = HubPaths.from_workspace(workspace)
+    init_db(paths)
+    typer.echo(f"Initialized AgentHub at {paths.db_path}")
 
 
 @app.command()
