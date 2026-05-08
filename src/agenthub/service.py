@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agenthub.config import HubPaths
@@ -365,6 +366,37 @@ class HubService:
             if result.rowcount == 0:
                 raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Run hub agent list.")
         return self.show_agent(agent_id)
+
+    def compact_events(self, days: int, mode: str) -> dict[str, Any]:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        with connect(self.paths) as conn:
+            rows = conn.execute(
+                "select id, task_id, type, by_agent_id, body, cursor, created_at from events where created_at < ? order by cursor",
+                (cutoff,),
+            ).fetchall()
+            events = [dict(row) for row in rows]
+            if not events:
+                return {"events_compacted": 0, "summary": None, "mode": mode}
+
+            start_cursor = events[0]["cursor"]
+            end_cursor = events[-1]["cursor"]
+
+            if mode == "summarize":
+                agent_bodies: dict[str, int] = {}
+                for event in events:
+                    agent_bodies[event["by_agent_id"]] = agent_bodies.get(event["by_agent_id"], 0) + 1
+                parts = [f"{aid} ({count} events)" for aid, count in sorted(agent_bodies.items())]
+                summary = f"Compacted {len(events)} events: {', '.join(parts)}"
+            else:
+                summary = f"Archived {len(events)} events"
+
+            conn.execute(
+                "insert into compactions (scope, summary, source_event_start, source_event_end, created_at) "
+                "values ('compact', ?, ?, ?, ?)",
+                (summary, start_cursor, end_cursor, utc_now()),
+            )
+            conn.execute("delete from events where cursor between ? and ?", (start_cursor, end_cursor))
+        return {"events_compacted": len(events), "summary": summary, "mode": mode}
 
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()

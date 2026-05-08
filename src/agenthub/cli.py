@@ -101,6 +101,29 @@ def _parse_interval_seconds(value: str) -> float:
         raise HubError("INVALID_INTERVAL", f"Invalid interval value: {value!r}", "Expected format: a number with optional ms or s suffix (e.g. 500ms, 5s, 2)")
 
 
+def _parse_days(value: str) -> int:
+    if value.endswith("d"):
+        return max(int(value[:-1]), 0)
+    try:
+        return max(int(value), 0)
+    except ValueError:
+        raise HubError("INVALID_DAYS", f"Invalid day value: {value!r}", "Expected format: a number with optional d suffix (e.g. 14d, 30)")
+
+
+@app.command()
+def compact(
+    older_than: str = typer.Option("14d", "--older-than"),
+    mode: str = typer.Option("summarize", "--mode"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Compact old events into summaries."""
+    days = _parse_days(older_than)
+    try:
+        echo_json(service_for(workspace).compact_events(days, mode))
+    except HubError as exc:
+        handle_error(exc)
+
+
 @app.command()
 def ui(
     host: str = typer.Option("127.0.0.1", "--host"),
