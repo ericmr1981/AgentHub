@@ -290,6 +290,61 @@ class HubService:
             self._insert_event(conn, task_id, "handoff", new_agent_id, f"reassigned to {new_agent_id}", [])
         return self.show_task(task_id, brief=False)
 
+    def create_handoff(self, task_id: str, from_agent_id: str, to_agent_id: str, reason: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            cursor = conn.execute(
+                "insert into handoffs (task_id, from_agent_id, to_agent_id, reason, status, created_at) values (?, ?, ?, ?, 'pending', ?)",
+                (task_id, from_agent_id, to_agent_id, reason, now),
+            )
+            public_id = f"H{cursor.lastrowid:06d}"
+            conn.execute("update handoffs set id = ? where pk = ?", (public_id, cursor.lastrowid))
+            self._insert_event(conn, task_id, "handoff", from_agent_id, f"handoff to {to_agent_id}: {reason}", [])
+        return self.show_handoff(public_id)
+
+    def accept_handoff(self, handoff_id: str, agent_id: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            result = conn.execute(
+                "update handoffs set status = 'accepted', accepted_at = ? where id = ? and status = 'pending' and to_agent_id = ?",
+                (now, handoff_id, agent_id),
+            )
+            if result.rowcount == 0:
+                existing = conn.execute("select status, to_agent_id from handoffs where id = ?", (handoff_id,)).fetchone()
+                if existing is None:
+                    raise HubError("HANDOFF_NOT_FOUND", f"Handoff {handoff_id} was not found", "Run hub handoff list.")
+                if existing["to_agent_id"] != agent_id:
+                    raise HubError("HANDOFF_NOT_FOR_YOU", f"Handoff {handoff_id} is addressed to {existing['to_agent_id']}", "")
+                raise HubError("HANDOFF_NOT_PENDING", f"Handoff {handoff_id} is already {existing['status']}", "")
+            handoff_row = conn.execute("select task_id from handoffs where pk = (select pk from handoffs where id = ?)", (handoff_id,)).fetchone()
+            conn.execute(
+                "update tasks set owner_agent_id = ?, updated_at = ? where id = ? and status in ('claimed', 'blocked')",
+                (agent_id, now, handoff_row["task_id"]),
+            )
+            self._insert_event(conn, handoff_row["task_id"], "handoff", agent_id, f"accepted handoff {handoff_id}", [])
+        return self.show_handoff(handoff_id)
+
+    def list_handoffs(self, status: str | None = None) -> list[dict[str, Any]]:
+        query = "select id, task_id, from_agent_id, to_agent_id, reason, status, created_at, accepted_at from handoffs"
+        params: tuple[Any, ...] = ()
+        if status:
+            query += " where status = ?"
+            params = (status,)
+        query += " order by pk"
+        with connect(self.paths) as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+
+    def show_handoff(self, handoff_id: str) -> dict[str, Any]:
+        with connect(self.paths) as conn:
+            row = conn.execute(
+                "select id, task_id, from_agent_id, to_agent_id, reason, status, created_at, accepted_at from handoffs where id = ?",
+                (handoff_id,),
+            ).fetchone()
+        if row is None:
+            raise HubError("HANDOFF_NOT_FOUND", f"Handoff {handoff_id} was not found", "Run hub handoff list.")
+        return dict(row)
+
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
         with connect(self.paths) as conn:

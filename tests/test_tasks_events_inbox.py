@@ -104,3 +104,37 @@ def test_reassign_task_changes_owner(service):
 
     assert reassigned["owner_agent_id"] == "claude-code"
     assert reassigned["status"] == "claimed"
+
+
+def test_handoff_create_and_accept(service):
+    task = service.create_task("Handoff", "Test handoff", "normal", [])
+    service.claim_task(task["id"], "codex")
+
+    handoff = service.create_handoff(task["id"], "codex", "claude-code", "please review")
+    accepted = service.accept_handoff(handoff["id"], "claude-code")
+
+    assert handoff["id"] == "H000001"
+    assert handoff["status"] == "pending"
+    assert accepted["status"] == "accepted"
+    assert accepted["accepted_at"] is not None
+
+
+def test_handoff_transfers_task_ownership(service):
+    task = service.create_task("Transfer", "Test transfer", "normal", [])
+    service.claim_task(task["id"], "codex")
+
+    handoff = service.create_handoff(task["id"], "codex", "claude-code", "take over")
+    service.accept_handoff(handoff["id"], "claude-code")
+
+    shown = service.show_task(task["id"], brief=False)
+    assert shown["owner_agent_id"] == "claude-code"
+
+
+def test_list_handoffs_returns_pending_first(service):
+    task = service.create_task("List", "Test list handoffs", "normal", [])
+    service.claim_task(task["id"], "codex")
+    service.create_handoff(task["id"], "codex", "claude-code", "please")
+    handoffs = service.list_handoffs(status="pending")
+
+    assert len(handoffs) == 1
+    assert handoffs[0]["to_agent_id"] == "claude-code"

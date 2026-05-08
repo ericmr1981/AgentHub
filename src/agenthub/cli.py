@@ -36,11 +36,13 @@ def handle_error(exc: HubError) -> None:
 app = typer.Typer(no_args_is_help=True, help="Local-first coordination hub for agents.")
 agent_app = typer.Typer(help="Manage agent registry and heartbeats.")
 task_app = typer.Typer(help="Manage task cards.")
+handoff_app = typer.Typer(help="Manage task handoffs between agents.")
 event_app = typer.Typer(help="Push short coordination events.")
 inbox_app = typer.Typer(help="Pull agent inbox events.")
 
 app.add_typer(agent_app, name="agent")
 app.add_typer(task_app, name="task")
+app.add_typer(handoff_app, name="handoff")
 app.add_typer(event_app, name="event")
 app.add_typer(inbox_app, name="inbox")
 
@@ -269,6 +271,64 @@ def task_close(
     """Close a task with a completion summary."""
     try:
         echo_json(service_for(workspace).close_task(task_id, agent, summary))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@handoff_app.command("create")
+def handoff_create(
+    task_id: str,
+    from_agent: str = typer.Option(..., "--from"),
+    to_agent: str = typer.Option(..., "--to"),
+    reason: str = typer.Option(..., "--reason"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Transfer a task from one agent to another."""
+    try:
+        echo_json(service_for(workspace).create_handoff(task_id, from_agent, to_agent, reason))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@handoff_app.command("accept")
+def handoff_accept(
+    handoff_id: str,
+    agent: str = typer.Option(..., "--agent"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Accept an incoming handoff."""
+    try:
+        echo_json(service_for(workspace).accept_handoff(handoff_id, agent))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@handoff_app.command("list")
+def handoff_list(
+    status: str | None = typer.Option(None, "--status"),
+    format: str = typer.Option("jsonl", "--format"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """List handoffs."""
+    try:
+        rows = service_for(workspace).list_handoffs(status=status)
+    except HubError as exc:
+        handle_error(exc)
+        return
+    if format == "jsonl":
+        echo_jsonl(rows)
+    else:
+        echo_json(rows)
+
+
+@handoff_app.command("show")
+def handoff_show(
+    handoff_id: str,
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Show handoff details."""
+    try:
+        echo_json(service_for(workspace).show_handoff(handoff_id))
     except HubError as exc:
         handle_error(exc)
 

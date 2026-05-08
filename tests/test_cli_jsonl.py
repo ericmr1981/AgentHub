@@ -127,3 +127,25 @@ def test_watch_cli_can_run_once_for_tests(runner, hub_home):
     assert watched.exit_code == 0
     rows = [json.loads(line) for line in watched.stdout.splitlines()]
     assert rows[0]["body"] == "watch me"
+
+
+def test_handoff_create_accept_cli(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "claude-code", "--profile", "claude-code", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["task", "create", "--title", "HandoffCLI", "--intent", "Test", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["task", "claim", "T000001", "--agent", "codex", "--workspace", str(hub_home)]).exit_code == 0
+
+    created = runner.invoke([
+        "handoff", "create", "T000001",
+        "--from", "codex", "--to", "claude-code",
+        "--reason", "take over",
+        "--workspace", str(hub_home),
+    ])
+    assert created.exit_code == 0
+    handoff = json.loads(created.stdout)
+    assert handoff["status"] == "pending"
+
+    accepted = runner.invoke(["handoff", "accept", handoff["id"], "--agent", "claude-code", "--workspace", str(hub_home)])
+    assert accepted.exit_code == 0
+    assert json.loads(accepted.stdout)["status"] == "accepted"
