@@ -345,6 +345,27 @@ class HubService:
             raise HubError("HANDOFF_NOT_FOUND", f"Handoff {handoff_id} was not found", "Run hub handoff list.")
         return dict(row)
 
+    def pause_agent(self, agent_id: str) -> dict[str, Any]:
+        with connect(self.paths) as conn:
+            result = conn.execute(
+                "update agents set status = 'paused' where id = ?",
+                (agent_id,),
+            )
+            if result.rowcount == 0:
+                raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Run hub agent list.")
+        return self.show_agent(agent_id)
+
+    def resume_agent(self, agent_id: str) -> dict[str, Any]:
+        now = utc_now()
+        with connect(self.paths) as conn:
+            result = conn.execute(
+                "update agents set status = 'active', last_seen_at = ? where id = ?",
+                (now, agent_id),
+            )
+            if result.rowcount == 0:
+                raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Run hub agent list.")
+        return self.show_agent(agent_id)
+
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
         with connect(self.paths) as conn:
@@ -356,6 +377,16 @@ class HubService:
         registered = agent is not None
         profile_ok = bool(agent and agent["profile_name"])
         heartbeat_ok = bool(agent and agent["last_seen_at"])
+        stale = False
+        if agent and agent["last_seen_at"]:
+            from datetime import datetime, timezone
+            from agenthub.models import STALE_HEARTBEAT_SECONDS
+            try:
+                last_seen = datetime.fromisoformat(agent["last_seen_at"])
+                elapsed = (datetime.now(timezone.utc) - last_seen).total_seconds()
+                stale = elapsed > STALE_HEARTBEAT_SECONDS
+            except (ValueError, TypeError):
+                stale = True
         return {
             "ok": database_ok and registered and profile_ok and heartbeat_ok,
             "agent": agent,
@@ -364,5 +395,6 @@ class HubService:
                 "registered": registered,
                 "profile": profile_ok,
                 "heartbeat": heartbeat_ok,
+                "stale": stale,
             },
         }

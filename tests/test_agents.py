@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from agenthub.config import HubPaths
-from agenthub.db import init_db
+from agenthub.db import connect, init_db
 from agenthub.errors import HubError
 from agenthub.profiles import DEFAULT_PROFILES, build_brief
 from agenthub.service import HubService
@@ -70,3 +70,32 @@ def test_doctor_reports_registered_agent(hub_home):
     assert report["checks"]["registered"] is True
     assert report["checks"]["profile"] is True
     assert report["agent"]["id"] == "codex"
+
+
+def test_pause_and_resume_agent(hub_home):
+    paths = HubPaths.from_workspace(hub_home)
+    init_db(paths)
+    service = HubService(paths)
+    service.register_agent("codex", "codex")
+    service.heartbeat_agent("codex", "active")
+
+    paused = service.pause_agent("codex")
+    resumed = service.resume_agent("codex")
+
+    assert paused["status"] == "paused"
+    assert resumed["status"] == "active"
+
+
+def test_doctor_detects_stale_agent(hub_home):
+    paths = HubPaths.from_workspace(hub_home)
+    init_db(paths)
+    service = HubService(paths)
+    service.register_agent("codex", "codex")
+
+    from datetime import datetime, timezone, timedelta
+    old_time = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    with connect(paths) as conn:
+        conn.execute("update agents set status = 'active', last_seen_at = ? where id = 'codex'", (old_time,))
+
+    report = service.doctor_agent("codex")
+    assert report["checks"]["stale"] is True

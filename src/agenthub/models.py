@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 AGENT_STATUSES = {"active", "idle", "paused", "stale"}
+STALE_HEARTBEAT_SECONDS = 3600  # 1 hour without heartbeat = stale
 TASK_STATUSES = {"open", "claimed", "blocked", "done", "archived"}
 EVENT_TYPES = {"status", "claim", "handoff", "blocked", "note", "artifact", "heartbeat"}
 HANDOFF_STATUSES = {"pending", "accepted", "stale"}

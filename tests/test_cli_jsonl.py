@@ -149,3 +149,17 @@ def test_handoff_create_accept_cli(runner, hub_home):
     accepted = runner.invoke(["handoff", "accept", handoff["id"], "--agent", "claude-code", "--workspace", str(hub_home)])
     assert accepted.exit_code == 0
     assert json.loads(accepted.stdout)["status"] == "accepted"
+
+
+def test_agent_pause_resume_cli(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "heartbeat", "codex", "--status", "active", "--workspace", str(hub_home)]).exit_code == 0
+
+    paused = runner.invoke(["agent", "pause", "codex", "--workspace", str(hub_home)])
+    assert paused.exit_code == 0
+    assert json.loads(paused.stdout)["status"] == "paused"
+
+    resumed = runner.invoke(["agent", "resume", "codex", "--workspace", str(hub_home)])
+    assert resumed.exit_code == 0
+    assert json.loads(resumed.stdout)["status"] == "active"

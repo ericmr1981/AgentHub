@@ -187,6 +187,30 @@ def agent_show(
         handle_error(exc)
 
 
+@agent_app.command("pause")
+def agent_pause(
+    agent_id: str,
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Pause an agent."""
+    try:
+        echo_json(service_for(workspace).pause_agent(agent_id))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@agent_app.command("resume")
+def agent_resume(
+    agent_id: str,
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
+    """Resume a paused agent."""
+    try:
+        echo_json(service_for(workspace).resume_agent(agent_id))
+    except HubError as exc:
+        handle_error(exc)
+
+
 @task_app.command("create")
 def task_create(
     title: str = typer.Option(..., "--title"),
