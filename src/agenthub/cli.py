@@ -404,11 +404,12 @@ def inbox_pull(
     since: int | None = typer.Option(None, "--since"),
     format: str = typer.Option("jsonl", "--format"),
     peek: bool = typer.Option(False, "--peek"),
+    all: bool = typer.Option(False, "--all", help="Show all events from the beginning, ignoring cursor."),
     workspace: Path = typer.Option(Path("."), "--workspace"),
 ) -> None:
     """Pull agent inbox events."""
     try:
-        payload = service_for(workspace).pull_inbox(agent, limit, since, peek)
+        payload = service_for(workspace).pull_inbox(agent, limit, since, peek, show_all=all)
     except HubError as exc:
         handle_error(exc)
         return

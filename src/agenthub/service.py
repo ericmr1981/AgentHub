@@ -188,12 +188,15 @@ class HubService:
         limit: int,
         since: int | None,
         peek: bool,
+        show_all: bool = False,
     ) -> dict[str, Any]:
         with connect(self.paths) as conn:
             agent = conn.execute("select id from agents where id = ?", (agent_id,)).fetchone()
             if agent is None:
                 raise HubError("AGENT_NOT_FOUND", f"Agent {agent_id} was not found", "Register the agent first.")
-            if since is None:
+            if show_all:
+                start_cursor = 0
+            elif since is None:
                 offset = conn.execute("select last_cursor from inbox_offsets where agent_id = ?", (agent_id,)).fetchone()
                 start_cursor = 0 if offset is None else int(offset["last_cursor"])
             else:
