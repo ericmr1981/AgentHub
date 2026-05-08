@@ -206,15 +206,41 @@ def task_claim(
 
 
 @event_app.command("push")
-def event_push() -> None:
+def event_push(
+    task: str | None = typer.Option(None, "--task"),
+    agent: str = typer.Option(..., "--agent"),
+    type: str = typer.Option(..., "--type"),
+    body: str = typer.Option(..., "--body"),
+    ref: list[str] = typer.Option([], "--ref"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """Push a short coordination event."""
-    typer.echo("event push is not implemented yet")
+    refs = [{"kind": "file", "uri": item, "summary": ""} for item in ref]
+    try:
+        echo_json(service_for(workspace).push_event(task, agent, type, body, refs))
+    except HubError as exc:
+        handle_error(exc)
 
 
 @inbox_app.command("pull")
-def inbox_pull() -> None:
+def inbox_pull(
+    agent: str = typer.Option(..., "--agent"),
+    limit: int = typer.Option(10, "--limit"),
+    since: int | None = typer.Option(None, "--since"),
+    format: str = typer.Option("jsonl", "--format"),
+    peek: bool = typer.Option(False, "--peek"),
+    workspace: Path = typer.Option(Path("."), "--workspace"),
+) -> None:
     """Pull agent inbox events."""
-    typer.echo("inbox pull is not implemented yet")
+    try:
+        payload = service_for(workspace).pull_inbox(agent, limit, since, peek)
+    except HubError as exc:
+        handle_error(exc)
+        return
+    if format == "jsonl":
+        echo_jsonl(payload["events"])
+    else:
+        echo_json(payload)
 
 
 def main() -> None:

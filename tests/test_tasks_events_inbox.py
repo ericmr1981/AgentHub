@@ -39,3 +39,37 @@ def test_claim_task_is_atomic(service):
         service.claim_task(task["id"], "claude-code")
 
     assert exc.value.code == "TASK_ALREADY_CLAIMED"
+
+
+def test_push_event_and_pull_inbox_advances_cursor(service):
+    task = service.create_task("Events", "Test inbox", "normal", [])
+    event = service.push_event(task["id"], "codex", "status", "schema done", [])
+
+    first_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
+    second_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
+
+    assert event["id"] == "E000001"
+    assert first_pull["events"][0]["body"] == "schema done"
+    assert first_pull["last_cursor"] == 1
+    assert second_pull["events"] == []
+
+
+def test_pull_inbox_peek_does_not_advance_cursor(service):
+    task = service.create_task("Peek", "Test peek", "normal", [])
+    service.push_event(task["id"], "codex", "status", "peekable", [])
+
+    first_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=True)
+    second_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
+
+    assert first_pull["events"][0]["body"] == "peekable"
+    assert second_pull["events"][0]["body"] == "peekable"
+
+
+def test_event_body_budget_is_enforced(service):
+    task = service.create_task("Budget", "Test body budget", "normal", [])
+    long_body = "x" * 281
+
+    with pytest.raises(HubError) as exc:
+        service.push_event(task["id"], "codex", "status", long_body, [])
+
+    assert exc.value.code == "BODY_TOO_LARGE"

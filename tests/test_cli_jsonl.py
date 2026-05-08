@@ -69,3 +69,25 @@ def test_task_create_claim_and_show_cli(runner, hub_home):
     shown = runner.invoke(["task", "show", "T000001", "--brief", "--workspace", str(hub_home)])
     assert shown.exit_code == 0
     assert json.loads(shown.stdout)["recent_events"][0]["type"] == "claim"
+
+
+def test_event_push_and_inbox_pull_cli(runner, hub_home):
+    assert runner.invoke(["init", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "codex", "--profile", "codex", "--workspace", str(hub_home)]).exit_code == 0
+    assert runner.invoke(["agent", "register", "claude-code", "--profile", "claude-code", "--workspace", str(hub_home)]).exit_code == 0
+    created = runner.invoke([
+        "task", "create", "--title", "Events", "--intent", "Test", "--workspace", str(hub_home)
+    ])
+    task_id = json.loads(created.stdout)["id"]
+
+    pushed = runner.invoke([
+        "event", "push", "--task", task_id, "--agent", "codex", "--type", "status", "--body", "schema done", "--workspace", str(hub_home)
+    ])
+    assert pushed.exit_code == 0
+
+    pulled = runner.invoke([
+        "inbox", "pull", "--agent", "claude-code", "--workspace", str(hub_home)
+    ])
+    assert pulled.exit_code == 0
+    rows = [json.loads(line) for line in pulled.stdout.splitlines()]
+    assert rows[0]["body"] == "schema done"

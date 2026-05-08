@@ -5,7 +5,7 @@ from typing import Any
 from agenthub.config import HubPaths
 from agenthub.db import connect
 from agenthub.errors import HubError
-from agenthub.models import AGENT_STATUSES, dumps_json, utc_now
+from agenthub.models import AGENT_STATUSES, EVENT_TYPES, dumps_json, utc_now
 from agenthub.profiles import get_profile
 
 
@@ -156,6 +156,61 @@ class HubService:
             "refs_json": dumps_json(refs),
             "cursor": next_cursor,
         }
+
+    def push_event(
+        self,
+        task_id: str | None,
+        agent_id: str,
+        event_type: str,
+        body: str,
+        refs: list[dict[str, str]],
+    ) -> dict[str, Any]:
+        if event_type not in EVENT_TYPES:
+            raise HubError("INVALID_EVENT_TYPE", f"Event type {event_type} is invalid", f"Use one of {sorted(EVENT_TYPES)}.")
+        agent = self.show_agent(agent_id)
+        profile = get_profile(agent["profile_name"])
+        if len(body) > profile.event_body_budget_chars:
+            raise HubError("BODY_TOO_LARGE", f"Event body is {len(body)} characters", f"Keep body under {profile.event_body_budget_chars} characters and move details into refs.")
+        with connect(self.paths) as conn:
+            if task_id is not None:
+                task = conn.execute("select id from tasks where id = ?", (task_id,)).fetchone()
+                if task is None:
+                    raise HubError("TASK_NOT_FOUND", f"Task {task_id} was not found", "Run hub task list.")
+            event = self._insert_event(conn, task_id, event_type, agent_id, body, refs)
+        return event
+
+    def pull_inbox(
+        self,
+        agent_id: str,
+        limit: int,
+        since: int | None,
+        peek: bool,
+    ) -> dict[str, Any]:
+        self.show_agent(agent_id)
+        with connect(self.paths) as conn:
+            if since is None:
+                offset = conn.execute("select last_cursor from inbox_offsets where agent_id = ?", (agent_id,)).fetchone()
+                start_cursor = 0 if offset is None else int(offset["last_cursor"])
+            else:
+                start_cursor = since
+            rows = conn.execute(
+                """
+                select id, task_id, type, by_agent_id, body, refs_json, cursor, created_at
+                from events
+                where cursor > ? and by_agent_id != ?
+                order by cursor
+                limit ?
+                """,
+                (start_cursor, agent_id, limit),
+            ).fetchall()
+            events = [dict(row) for row in rows]
+            last_cursor = events[-1]["cursor"] if events else start_cursor
+            if events and not peek and since is None:
+                conn.execute(
+                    "insert into inbox_offsets (agent_id, last_cursor) values (?, ?) on conflict(agent_id) do update set last_cursor = excluded.last_cursor",
+                    (agent_id, last_cursor),
+                )
+        return {"agent_id": agent_id, "last_cursor": last_cursor, "events": events}
 
     def doctor_agent(self, agent_id: str) -> dict[str, Any]:
         database_ok = self.paths.db_path.exists()
