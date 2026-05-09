@@ -50,12 +50,12 @@ class A2AHandler:
                 return self._ok(req_id, {"task": {"id": task["id"], "status": task["status"]}})
 
             elif ptype == "claim" and refs:
-                result = self._svc.claim_task(refs[0], message.get("messageId", ""))
+                result = self._svc.claim_task(refs[0], sender)
                 return self._ok(req_id, {"task": {"id": result["id"], "status": result["status"]}})
 
             elif ptype == "close" and refs:
                 text = part.get("text", "completed")
-                result = self._svc.close_task(refs[0], message.get("messageId", ""), text)
+                result = self._svc.close_task(refs[0], sender, text)
                 return self._ok(req_id, {"task": {"id": result["id"], "status": result["status"]}})
 
             elif ptype == "handoff" and refs:
@@ -68,7 +68,7 @@ class A2AHandler:
 
             elif ptype == "status" and refs:
                 text = part.get("text", "")
-                event = self._svc.push_event(refs[0], message.get("messageId", ""), "status", text, [])
+                event = self._svc.push_event(refs[0], sender, "status", text, [])
                 return self._ok(req_id, {"event": {"id": event["id"], "body": event["body"]}})
 
         return self._error(req_id, -32602, "No handler matched the message parts")

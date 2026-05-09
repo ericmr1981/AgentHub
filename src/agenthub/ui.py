@@ -31,6 +31,11 @@ def create_app(paths: HubPaths) -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(package_files / "static")), name="static")
     svc = HubService(paths)
     a2a = A2AHandler(svc)
+    # Register system agent for SSE event stream
+    try:
+        svc.register_agent("system", "system")
+    except Exception:
+        pass
 
     @app.get("/api/dashboard")
     def dashboard_api():
@@ -197,8 +202,8 @@ def create_app(paths: HubPaths) -> FastAPI:
             last_cursor = 0
             while True:
                 try:
-                    events = svc.pull_inbox("system", limit=50, since=last_cursor, peek=True)
-                    for event in events.get("events", []):
+                    events = svc.stream_events(since=last_cursor, limit=50)
+                    for event in events:
                         yield f"data: {_json.dumps(event)}\n\n"
                         if event.get("cursor", 0) > last_cursor:
                             last_cursor = event["cursor"]

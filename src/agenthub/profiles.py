@@ -11,6 +11,7 @@ PROMPT_SNIPPET = (
 )
 
 DEFAULT_PROFILES: dict[str, Profile] = {
+    "system": Profile("system", "System", 100, 500, 4096, "jsonl", False, False, "System user for SSE event stream."),
     "codex": Profile("codex", "Codex", 10, 1000, 280, "jsonl", True, False, PROMPT_SNIPPET),
     "claude-code": Profile("claude-code", "Claude Code", 10, 1000, 280, "jsonl", True, False, PROMPT_SNIPPET),
     "openclaw": Profile("openclaw", "OpenClaw", 10, 1000, 280, "jsonl", True, True, PROMPT_SNIPPET),

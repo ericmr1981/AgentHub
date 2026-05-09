@@ -76,6 +76,7 @@ class HubService:
             )
             public_id = f"T{cursor.lastrowid:06d}"
             conn.execute("update tasks set id = ? where pk = ?", (public_id, cursor.lastrowid))
+            self._insert_event(conn, public_id, "note", "system", f"task created: {title}", [])
         return self.show_task(public_id, brief=False)
 
     def list_tasks(self, status: str | None = None) -> list[dict[str, Any]]:
@@ -219,6 +220,21 @@ class HubService:
                     (agent_id, last_cursor),
                 )
         return {"agent_id": agent_id, "last_cursor": last_cursor, "events": events}
+
+    def stream_events(self, since: int = 0, limit: int = 50) -> list[dict[str, Any]]:
+        """Return all events since a cursor, unfiltered. Used by the SSE stream."""
+        with connect(self.paths) as conn:
+            rows = conn.execute(
+                """
+                select id, task_id, type, by_agent_id, body, refs_json, cursor, created_at
+                from events
+                where cursor > ?
+                order by cursor
+                limit ?
+                """,
+                (since, limit),
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def dashboard_snapshot(self) -> dict[str, Any]:
         with connect(self.paths) as conn:
