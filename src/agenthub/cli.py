@@ -147,6 +147,15 @@ def brief(agent: str = typer.Option(..., "--agent"), format: str = typer.Option(
 
 
 @app.command()
+def status(agent: str = typer.Option(..., "--agent"), workspace: Path = typer.Option(Path("."), "--workspace")) -> None:
+    """Show agent dashboard: inbox, my tasks, pending handoffs."""
+    try:
+        echo_json(service_for(workspace).agent_status(agent))
+    except HubError as exc:
+        handle_error(exc)
+
+
+@app.command()
 def doctor(agent: str = typer.Option(..., "--agent"), workspace: Path = typer.Option(Path("."), "--workspace")) -> None:
     """Validate agent registration and health."""
     try:
