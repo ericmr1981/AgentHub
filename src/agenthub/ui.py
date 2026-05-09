@@ -162,6 +162,17 @@ def create_app(paths: HubPaths) -> FastAPI:
     def onboarding_page(request: Request):
         return templates.TemplateResponse(request, "onboarding.html", {})
 
+    @app.get("/.well-known/agent-card")
+    def agent_card():
+        return {
+            "name": "AgentHub",
+            "description": "Multi-agent coordination hub",
+            "version": "1.0",
+            "capabilities": {"streaming": True},
+            "interfaces": [{"type": "a2a", "url": "http://localhost:8765/a2a"}],
+            "skills": [{"id": "coordination", "tags": ["task", "handoff", "coordination"]}],
+        }
+
     return app
 
 
