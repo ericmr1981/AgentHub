@@ -3,4 +3,3 @@ __pycache__/
 *.egg-info/
 .agenthub/
 uv.lock
-.DS_Store
