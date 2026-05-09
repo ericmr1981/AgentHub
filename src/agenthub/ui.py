@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from agenthub.a2a import A2AHandler
 from agenthub.config import HubPaths
 from agenthub.errors import HubError
 from agenthub.models import STALE_HEARTBEAT_SECONDS
@@ -28,6 +29,7 @@ def create_app(paths: HubPaths) -> FastAPI:
     templates = Jinja2Templates(env=jinja_env)
     app.mount("/static", StaticFiles(directory=str(package_files / "static")), name="static")
     svc = HubService(paths)
+    a2a = A2AHandler(svc)
 
     @app.get("/api/dashboard")
     def dashboard_api():
@@ -172,6 +174,15 @@ def create_app(paths: HubPaths) -> FastAPI:
             "interfaces": [{"type": "a2a", "url": "http://localhost:8765/a2a"}],
             "skills": [{"id": "coordination", "tags": ["task", "handoff", "coordination"]}],
         }
+
+    @app.post("/a2a")
+    async def a2a_endpoint(request: Request):
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+        result = a2a.dispatch(body)
+        return result
 
     return app
 
