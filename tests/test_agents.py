@@ -53,7 +53,7 @@ def test_register_heartbeat_list_and_show_agent(hub_home):
     assert shown["status"] == "active"
     assert shown["profile_name"] == "codex"
     assert shown["last_seen_at"] is not None
-    assert [item["id"] for item in agents] == ["codex"]
+    assert [item["id"] for item in agents] == ["codex", "system"]
 
 
 def test_doctor_reports_registered_agent(hub_home):

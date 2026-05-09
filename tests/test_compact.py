@@ -18,6 +18,6 @@ def test_compact_summarizes_old_events(hub_home):
 
     result = service.compact_events(days=0, mode="summarize")
 
-    assert result["events_compacted"] == 10
+    assert result["events_compacted"] == 11
     assert result["summary"] is not None
     assert result["mode"] == "summarize"

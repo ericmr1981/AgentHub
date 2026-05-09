@@ -106,3 +106,9 @@ def connect(paths: HubPaths) -> Iterator[sqlite3.Connection]:
 def init_db(paths: HubPaths) -> None:
     with connect(paths) as conn:
         conn.executescript(SCHEMA)
+        conn.execute(
+            """
+            insert or ignore into agents (id, display_name, profile_name, status, last_seen_at, metadata_json)
+            values ('system', 'System', 'codex', 'idle', datetime('now'), '{}')
+            """
+        )

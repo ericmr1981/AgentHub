@@ -48,9 +48,9 @@ def test_push_event_and_pull_inbox_advances_cursor(service):
     first_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
     second_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
 
-    assert event["id"] == "E000001"
-    assert first_pull["events"][0]["body"] == "schema done"
-    assert first_pull["last_cursor"] == 1
+    assert event["id"] == "E000002"
+    assert first_pull["events"][1]["body"] == "schema done"
+    assert first_pull["last_cursor"] == 2
     assert second_pull["events"] == []
 
 
@@ -61,8 +61,8 @@ def test_pull_inbox_peek_does_not_advance_cursor(service):
     first_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=True)
     second_pull = service.pull_inbox("claude-code", limit=10, since=None, peek=False)
 
-    assert first_pull["events"][0]["body"] == "peekable"
-    assert second_pull["events"][0]["body"] == "peekable"
+    assert first_pull["events"][1]["body"] == "peekable"
+    assert second_pull["events"][1]["body"] == "peekable"
 
 
 def test_event_body_budget_is_enforced(service):

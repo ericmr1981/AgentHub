@@ -68,7 +68,7 @@ def test_task_create_claim_and_show_cli(runner, hub_home):
 
     shown = runner.invoke(["task", "show", "T000001", "--brief", "--workspace", str(hub_home)])
     assert shown.exit_code == 0
-    assert json.loads(shown.stdout)["recent_events"][0]["type"] == "claim"
+    assert json.loads(shown.stdout)["recent_events"][1]["type"] == "claim"
 
 
 def test_event_push_and_inbox_pull_cli(runner, hub_home):
@@ -90,7 +90,7 @@ def test_event_push_and_inbox_pull_cli(runner, hub_home):
     ])
     assert pulled.exit_code == 0
     rows = [json.loads(line) for line in pulled.stdout.splitlines()]
-    assert rows[0]["body"] == "schema done"
+    assert rows[1]["body"] == "schema done"
 
 
 def test_task_block_and_close_cli(runner, hub_home):
@@ -126,7 +126,7 @@ def test_watch_cli_can_run_once_for_tests(runner, hub_home):
 
     assert watched.exit_code == 0
     rows = [json.loads(line) for line in watched.stdout.splitlines()]
-    assert rows[0]["body"] == "watch me"
+    assert rows[1]["body"] == "watch me"
 
 
 def test_handoff_create_accept_cli(runner, hub_home):

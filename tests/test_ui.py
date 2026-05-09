@@ -21,7 +21,7 @@ def test_dashboard_snapshot_contains_radar_tasks_and_timeline(hub_home):
 
     snapshot = service.dashboard_snapshot()
 
-    assert snapshot["radar"]["agents_total"] == 2
+    assert snapshot["radar"]["agents_total"] == 3
     assert snapshot["radar"]["agents_active"] == 1
     assert snapshot["radar"]["tasks_blocked"] == 0
     assert snapshot["tasks"][0]["id"] == "T000001"
