@@ -433,20 +433,3 @@ class HubService:
                 "stale": stale,
             },
         }
-
-    def agent_status(self, agent_id: str) -> dict[str, Any]:
-        """Return a compact dashboard for an agent: inbox, pending handoffs, open tasks, my tasks."""
-        inbox = self.pull_inbox(agent_id, limit=10, since=None, peek=True)
-        handoffs = self.list_handoffs(status="pending")
-        my_handoffs = [h for h in handoffs if h["to_agent_id"] == agent_id]
-        all_tasks = self.list_tasks()
-        open_tasks = [t for t in all_tasks if t["status"] == "open"]
-        my_tasks = [t for t in all_tasks if t.get("owner_agent_id") == agent_id and t["status"] in ("claimed", "blocked")]
-        return {
-            "agent_id": agent_id,
-            "status": self.show_agent(agent_id)["status"],
-            "inbox_events": inbox["events"],
-            "my_tasks": my_tasks,
-            "pending_handoffs": my_handoffs,
-            "open_tasks_count": len(open_tasks),
-        }
