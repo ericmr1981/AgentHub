@@ -303,7 +303,7 @@ class HubService:
             )
             public_id = f"H{cursor.lastrowid:06d}"
             conn.execute("update handoffs set id = ? where pk = ?", (public_id, cursor.lastrowid))
-            self._insert_event(conn, task_id, "handoff", from_agent_id, f"handoff {public_id} to {to_agent_id}: {reason}", [])
+            self._insert_event(conn, task_id, "handoff", from_agent_id, f"handoff to {to_agent_id}: {reason}", [])
         return self.show_handoff(public_id)
 
     def accept_handoff(self, handoff_id: str, agent_id: str) -> dict[str, Any]:
