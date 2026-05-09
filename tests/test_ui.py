@@ -105,3 +105,55 @@ def test_ui_artifacts_api(hub_home):
     resp = client.get("/api/artifacts")
     assert resp.status_code == 200
     assert "artifacts" in resp.json()
+
+
+def test_ui_sse_stream(hub_home):
+    """Test SSE stream endpoint via a real uvicorn server.
+
+    Uses raw sockets (not TestClient) to avoid the ASGI-transport
+    lifecycle deadlock inherent to infinite SSE generators.
+    """
+    import socket
+    import threading
+    import time
+
+    import uvicorn
+
+    paths = HubPaths.from_workspace(hub_home)
+    init_db(paths)
+
+    app = create_app(paths)
+    port = 19876
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="error")
+    server = uvicorn.Server(config)
+
+    t = threading.Thread(target=server.run, daemon=True)
+    t.start()
+    time.sleep(1)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(5)
+    try:
+        sock.connect(("127.0.0.1", port))
+        sock.sendall(b"GET /api/events/stream HTTP/1.1\r\nHost: localhost\r\nAccept: text/event-stream\r\n\r\n")
+
+        # Read the HTTP response line by line until we have all headers.
+        # We use makefile() for line-buffered reading over the socket.
+        f = sock.makefile("rb")
+        status_line = f.readline()
+        assert b"200" in status_line, f"Expected 200, got: {status_line.strip()}"
+
+        headers = {}
+        while True:
+            line = f.readline()
+            if line in (b"\r\n", b"\n", b""):
+                break
+            if b":" in line:
+                key, _, val = line.partition(b":")
+                headers[key.strip().lower()] = val.strip()
+
+        ct = headers.get(b"content-type", b"")
+        assert b"text/event-stream" in ct, f"Expected text/event-stream, got: {ct}"
+    finally:
+        sock.close()

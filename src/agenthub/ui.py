@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json as _json
 import os
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from importlib.resources import files
 import jinja2
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -183,6 +184,29 @@ def create_app(paths: HubPaths) -> FastAPI:
             return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
         result = a2a.dispatch(body)
         return result
+
+    @app.get("/api/events/stream")
+    async def event_stream():
+        """SSE endpoint: agents connect to receive real-time task events.
+
+        Usage: curl -N http://localhost:8765/api/events/stream
+
+        Pushes new events every 1 second as SSE data lines.
+        """
+        async def generate():
+            last_cursor = 0
+            while True:
+                try:
+                    events = svc.pull_inbox("system", limit=50, since=last_cursor, peek=True)
+                    for event in events.get("events", []):
+                        yield f"data: {_json.dumps(event)}\n\n"
+                        if event.get("cursor", 0) > last_cursor:
+                            last_cursor = event["cursor"]
+                except Exception:
+                    pass
+                await asyncio.sleep(1)
+
+        return StreamingResponse(generate(), media_type="text/event-stream")
 
     return app
 
