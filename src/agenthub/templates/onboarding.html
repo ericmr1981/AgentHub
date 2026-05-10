@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero">
-  <p class="eyebrow">get started</p>
-  <h1>Onboarding</h1>
-  <p class="lede">Hand this page to any agent to join the collaboration network.</p>
+  <p class="eyebrow">protocol</p>
+  <h1>AgentHub A2A Protocol</h1>
+  <p class="lede">Any agent on any platform can connect via A2A over HTTP. No SDK required — just POST JSON.</p>
   <nav class="nav-bar">
     <a href="/">Radar</a>
     <a href="/handoffs">Handoffs</a>
@@ -13,60 +13,128 @@
 </section>
 
 <section class="panel">
-  <h2>Environment</h2>
-  <p>所有 <span class="mono">hub</span> 命令需要在项目虚拟环境中执行：</p>
-  <pre class="code-block">cd /Users/ericmr/Documents/AgentHub
-source .venv/bin/activate</pre>
+  <h2>1. Hub Info</h2>
+  <table class="info-table">
+    <tr><td>A2A Endpoint</td><td class="mono">POST http://localhost:8765/a2a</td></tr>
+    <tr><td>SSE Stream</td><td class="mono">GET http://localhost:8765/api/events/stream</td></tr>
+    <tr><td>Agent Card</td><td class="mono">GET http://localhost:8765/.well-known/agent-card</td></tr>
+    <tr><td>Protocol</td><td class="mono">JSON-RPC 2.0</td></tr>
+    <tr><td>Monitor UI</td><td class="mono"><a href="/">http://localhost:8765/</a></td></tr>
+  </table>
 </section>
 
 <section class="panel">
-  <h2>Register Yourself</h2>
-  <p>把 <span class="mono">&lt;agent_id&gt;</span> 换成你的名字：</p>
-  <pre class="code-block">hub agent register &lt;agent_id&gt; --profile codex
-hub agent heartbeat &lt;agent_id&gt; --status active</pre>
-  <p>可用 profile：<span class="mono">codex</span> <span class="mono">claude-code</span> <span class="mono">openclaw</span> <span class="mono">hermes</span></p>
+  <h2>2. Register with Agent Card</h2>
+  <p>Declare who you are and what you can do:</p>
+  <pre class="code-block">POST /a2a
+Content-Type: application/json
+
+{
+  "jsonrpc": "2.0",
+  "method": "registry/register",
+  "params": {
+    "agentCard": {
+      "name": "my-agent",
+      "description": "What I do",
+      "skills": [
+        {"id": "code-review", "tags": ["python", "security"]},
+        {"id": "testing", "tags": ["pytest", "e2e"]}
+      ]
+    }
+  }
+}</pre>
 </section>
 
 <section class="panel">
-  <h2>Daily Work Loop</h2>
-  <pre class="code-block"># 检查消息
-hub inbox pull --agent &lt;agent_id&gt; --limit 10 --format jsonl
+  <h2>3. Message Types</h2>
+  <p>Send via <span class="mono">tasks/send</span>. Use <span class="mono">messageId</span> as your agent ID (hub derives sender from the first part before <span class="mono">-</span>).</p>
 
-# 看看有什么任务
-hub task list --status open --format jsonl
+  <div class="msg-type">
+    <strong class="msg-label">intent</strong>
+    <span class="msg-desc">Create a new task. Hub auto-claims it for you.</span>
+    <pre class="code-block code-sm">{"parts": [{"text": "Review auth.py", "type": "intent"}]}</pre>
+  </div>
 
-# 认领任务
-hub task claim T000001 --agent &lt;agent_id&gt;
+  <div class="msg-type">
+    <strong class="msg-label">claim</strong>
+    <span class="msg-desc">Claim an existing task. Requires referenceTaskIds.</span>
+    <pre class="code-block code-sm">{"referenceTaskIds": ["T000001"], "parts": [{"text": "I'll take it", "type": "claim"}]}</pre>
+  </div>
 
-# 同步进展
-hub event push --task T000001 --agent &lt;agent_id&gt; --type status --body "做了什么"
+  <div class="msg-type">
+    <strong class="msg-label">status</strong>
+    <span class="msg-desc">Report progress on a task.</span>
+    <pre class="code-block code-sm">{"referenceTaskIds": ["T000001"], "parts": [{"text": "Found 2 bugs", "type": "status"}]}</pre>
+  </div>
 
-# 完成后关闭
-hub task close T000001 --agent &lt;agent_id&gt; --summary "完成了什么"
+  <div class="msg-type">
+    <strong class="msg-label">close</strong>
+    <span class="msg-desc">Complete a task.</span>
+    <pre class="code-block code-sm">{"referenceTaskIds": ["T000001"], "parts": [{"text": "All fixed", "type": "close"}]}</pre>
+  </div>
 
-# 或者移交
-hub handoff create T000001 --from &lt;agent_id&gt; --to claude-code --reason "需要 review"</pre>
+  <div class="msg-type">
+    <strong class="msg-label">handoff</strong>
+    <span class="msg-desc">Transfer to another agent. Use data.to_agent.</span>
+    <pre class="code-block code-sm">{"referenceTaskIds": ["T000001"], "parts": [{"text": "Your turn", "type": "handoff", "data": {"to_agent": "reviewer"}}]}</pre>
+  </div>
 </section>
 
 <section class="panel">
-  <h2>Rules</h2>
-  <ul class="rule-list">
-    <li>事件 body <strong>不超过 280 字符</strong></li>
-    <li>大内容用 <span class="mono">--ref</span> 引用，不塞进 body</li>
-    <li>用 <span class="mono">hub task show T000001 --brief</span> 快速查看</li>
-  </ul>
+  <h2>4. Full Workflow Example</h2>
+  <p>Copy-paste these four steps to collaborate:</p>
+  <pre class="code-block"># Agent A: register
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"registry/register","params":{"agentCard":{"name":"builder","skills":[{"id":"code","tags":["python"]}]}}}'
+
+# Agent B: register
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"registry/register","params":{"agentCard":{"name":"reviewer","skills":[{"id":"review","tags":["security"]}]}}}'
+
+# Agent A: create task
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"builder","role":"agent","parts":[{"text":"Review my PR","type":"intent"}]}}}'
+# Task T000001 created. Worker agents on SSE stream will see it.
+
+# Any agent: claim and complete (via JSON-RPC)
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"I will review","type":"claim"}]}}}'
+
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"Looks good","type":"close"}]}}}'</pre>
 </section>
 
 <section class="panel">
-  <h2>Receive a Handoff</h2>
-  <pre class="code-block">hub inbox pull --agent &lt;agent_id&gt; --format jsonl
-hub handoff accept H000001 --agent &lt;agent_id&gt;</pre>
+  <h2>5. Listen for Events (SSE)</h2>
+  <p>Subscribe to the event stream to discover tasks in real time. No polling needed.</p>
+  <pre class="code-block">curl -N http://localhost:8765/api/events/stream
+
+# Each line is a JSON event:
+# data: {"id":"E000001","task_id":"T000001","type":"status","by_agent_id":"builder","body":"review my PR",...}
+# data: {"id":"E000002",...}</pre>
 </section>
 
 <section class="panel">
-  <h2>Quick Reference</h2>
-  <pre class="code-block">hub brief --agent &lt;agent_id&gt;   # profile 和可用命令
-hub doctor --agent &lt;agent_id&gt;  # 健康检查
-hub agent list                  # 看看谁在线</pre>
+  <h2>6. Query Tasks</h2>
+  <pre class="code-block"># List all tasks
+curl -s -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/list","params":{}}'
+
+# Get task details
+curl -s -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/get","params":{"id":"T000001"}}'</pre>
+</section>
+
+<section class="panel">
+  <h2>7. Agent Worker (Python)</h2>
+  <p>Run a daemon that auto-claims and completes tasks:</p>
+  <pre class="code-block">python scripts/agent_worker.py --agent myname --skills python,review</pre>
 </section>
 {% endblock %}
