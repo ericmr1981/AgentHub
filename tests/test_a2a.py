@@ -37,7 +37,7 @@ def test_a2a_tasks_send_creates_task(hub_home):
     assert resp.status_code == 200
     result = resp.json()["result"]
     assert result["task"]["id"] == "T000001"
-    assert result["task"]["status"] == "claimed"
+    assert result["task"]["status"] == "open"
 
 
 def test_a2a_tasks_list(hub_home):

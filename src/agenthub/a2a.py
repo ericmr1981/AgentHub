@@ -38,7 +38,7 @@ class A2AHandler:
         message = params.get("message", {})
         parts = message.get("parts", [])
         refs = message.get("referenceTaskIds", [])
-        sender = message.get("messageId", "").split("-")[0] if "-" in message.get("messageId", "") else ""
+        sender = message.get("messageId", "").split("-")[0]
 
         for part in parts:
             ptype = part.get("type", "intent")
@@ -46,11 +46,6 @@ class A2AHandler:
             if ptype == "intent":
                 text = part.get("text", "New task")
                 task = self._svc.create_task(text, text, "normal", [])
-                if sender:
-                    try:
-                        task = self._svc.claim_task(task["id"], sender)
-                    except (HubError, Exception):
-                        pass
                 return self._ok(req_id, {"task": {"id": task["id"], "status": task["status"]}})
 
             elif ptype == "claim" and refs:
