@@ -3,3 +3,5 @@ __pycache__/
 *.egg-info/
 .agenthub/
 uv.lock
+.playwright-mcp/
+onboarding-snapshot.md
