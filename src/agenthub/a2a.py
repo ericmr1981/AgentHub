@@ -38,7 +38,7 @@ class A2AHandler:
         message = params.get("message", {})
         parts = message.get("parts", [])
         refs = message.get("referenceTaskIds", [])
-        sender = message.get("messageId", "").split("-")[0]
+        sender = message.get("messageId", "")
 
         for part in parts:
             ptype = part.get("type", "intent")

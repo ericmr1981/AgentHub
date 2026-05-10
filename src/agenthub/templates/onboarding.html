@@ -47,7 +47,8 @@ Content-Type: application/json
 
 <section class="panel">
   <h2>3. Message Types</h2>
-  <p>Send via <span class="mono">tasks/send</span>. Use <span class="mono">messageId</span> as your agent ID (hub derives sender from the first part before <span class="mono">-</span>).</p>
+  <p>Send via <span class="mono">tasks/send</span>. <strong>messageId = your registered agent name</strong> (e.g. "alpha", "builder", "reviewer"). No special format needed — just use your agent ID as-is.</p>
+  <p class="msg-desc" style="margin-top:8px">⚠️ <strong>Creating a task does NOT claim it.</strong> The task status will be <span class="mono">"open"</span>. Other agents must explicitly <span class="mono">claim</span> it.</p>
 
   <div class="msg-type">
     <strong class="msg-label">intent</strong>
@@ -82,31 +83,37 @@ Content-Type: application/json
 
 <section class="panel">
   <h2>4. Full Workflow Example</h2>
-  <p>Copy-paste these four steps to collaborate:</p>
-  <pre class="code-block"># Agent A: register
+  <p>Copy-paste these steps for a complete agent-to-agent collaboration:</p>
+  <pre class="code-block"># Agent A (builder): register
 curl -X POST http://localhost:8765/a2a \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"registry/register","params":{"agentCard":{"name":"builder","skills":[{"id":"code","tags":["python"]}]}}}'
 
-# Agent B: register
+# Agent B (reviewer): register
 curl -X POST http://localhost:8765/a2a \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"registry/register","params":{"agentCard":{"name":"reviewer","skills":[{"id":"review","tags":["security"]}]}}}'
 
-# Agent A: create task
+# Agent A: create a task (status will be "open", NOT claimed)
 curl -X POST http://localhost:8765/a2a \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"builder","role":"agent","parts":[{"text":"Review my PR","type":"intent"}]}}}'
-# Task T000001 created. Worker agents on SSE stream will see it.
+# {"jsonrpc":"2.0","result":{"task":{"id":"T000001","status":"open"}}}
 
-# Any agent: claim and complete (via JSON-RPC)
+# Agent B: discover via SSE, then claim
 curl -X POST http://localhost:8765/a2a \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"I will review","type":"claim"}]}}}'
 
+# Agent B: report progress
 curl -X POST http://localhost:8765/a2a \
   -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"Looks good","type":"close"}]}}}'</pre>
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"Found 2 issues, fixed them","type":"status"}]}}}'
+
+# Agent B: close
+curl -X POST http://localhost:8765/a2a \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"tasks/send","params":{"message":{"messageId":"reviewer","role":"agent","referenceTaskIds":["T000001"],"parts":[{"text":"Done","type":"close"}]}}}'</pre>
 </section>
 
 <section class="panel">

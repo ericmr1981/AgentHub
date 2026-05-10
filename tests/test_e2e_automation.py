@@ -27,7 +27,7 @@ def test_two_agents_auto_claim_and_close(hub_home):
         "params": {"agentCard": {"name": "beta", "skills": [{"id": "review", "tags": ["review"]}]}}
     })
 
-    # Agent A creates task (messageId without "-" so no auto-claim)
+    # Agent A creates task
     result = handler.dispatch({
         "jsonrpc": "2.0", "id": "3", "method": "tasks/send",
         "params": {"message": {
@@ -43,7 +43,7 @@ def test_two_agents_auto_claim_and_close(hub_home):
     claim = handler.dispatch({
         "jsonrpc": "2.0", "id": "4", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "beta-msg",
+            "messageId": "beta",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "I'll review this", "type": "claim"}]
@@ -55,7 +55,7 @@ def test_two_agents_auto_claim_and_close(hub_home):
     handler.dispatch({
         "jsonrpc": "2.0", "id": "5", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "beta-status",
+            "messageId": "beta",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "Found 2 issues", "type": "status"}]
@@ -66,7 +66,7 @@ def test_two_agents_auto_claim_and_close(hub_home):
     close = handler.dispatch({
         "jsonrpc": "2.0", "id": "6", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "beta-close",
+            "messageId": "beta",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "All fixed", "type": "close"}]
@@ -97,7 +97,7 @@ def test_three_agents_full_handoff_chain(hub_home):
             }}
         })
 
-    # alpha creates task (no "-" in messageId means no auto-claim)
+    # alpha creates task
     r = handler.dispatch({
         "jsonrpc": "2.0", "id": "create", "method": "tasks/send",
         "params": {"message": {
@@ -112,7 +112,7 @@ def test_three_agents_full_handoff_chain(hub_home):
     handler.dispatch({
         "jsonrpc": "2.0", "id": "claim", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "beta-claim",
+            "messageId": "beta",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "I'll start phase 1", "type": "claim"}]
@@ -123,7 +123,7 @@ def test_three_agents_full_handoff_chain(hub_home):
     h = handler.dispatch({
         "jsonrpc": "2.0", "id": "handoff", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "beta-handoff",
+            "messageId": "beta",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{
@@ -142,7 +142,7 @@ def test_three_agents_full_handoff_chain(hub_home):
     close = handler.dispatch({
         "jsonrpc": "2.0", "id": "close", "method": "tasks/send",
         "params": {"message": {
-            "messageId": "gamma-close",
+            "messageId": "gamma",
             "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "Chain complete", "type": "close"}]
@@ -168,7 +168,7 @@ def test_auto_handoff_accept_via_a2a(hub_home):
             "params": {"agentCard": {"name": name, "skills": [{"id": name, "tags": [name]}]}}
         })
 
-    # Alpha creates (no auto-claim since messageId has no "-")
+    # Alpha creates
     r = handler.dispatch({
         "jsonrpc": "2.0", "id": "1", "method": "tasks/send",
         "params": {"message": {"messageId": "alpha", "role": "agent",
@@ -179,7 +179,7 @@ def test_auto_handoff_accept_via_a2a(hub_home):
     # Beta claims
     handler.dispatch({
         "jsonrpc": "2.0", "id": "2", "method": "tasks/send",
-        "params": {"message": {"messageId": "beta-claim", "role": "agent",
+        "params": {"message": {"messageId": "beta", "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "Taking over", "type": "claim"}]}}
     })
@@ -188,7 +188,7 @@ def test_auto_handoff_accept_via_a2a(hub_home):
     # Beta closes
     result = handler.dispatch({
         "jsonrpc": "2.0", "id": "3", "method": "tasks/send",
-        "params": {"message": {"messageId": "beta-close", "role": "agent",
+        "params": {"message": {"messageId": "beta", "role": "agent",
             "referenceTaskIds": [task_id],
             "parts": [{"text": "All done", "type": "close"}]}}
     })

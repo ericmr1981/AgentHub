@@ -25,7 +25,7 @@ def test_a2a_tasks_send_creates_task(hub_home):
         "method": "tasks/send",
         "params": {
             "message": {
-                "messageId": "alpha-1",
+                "messageId": "alpha",
                 "role": "agent",
                 "parts": [
                     {"text": "Review my PR for security issues", "type": "intent"}
