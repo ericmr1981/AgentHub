@@ -58,3 +58,42 @@ def test_a2a_tasks_list(hub_home):
     assert resp.status_code == 200
     tasks = resp.json()["result"]["tasks"]
     assert len(tasks) >= 1
+
+
+def test_a2a_registry_list_returns_agents(hub_home):
+    from agenthub.registry import AgentRegistry
+
+    paths = HubPaths.from_workspace(hub_home)
+    init_db(paths)
+    svc = HubService(paths)
+    reg = AgentRegistry(svc)
+    reg.register("alpha", {"name": "alpha", "skills": [{"id": "a", "tags": ["code"]}]})
+    reg.register("beta", {"name": "beta", "skills": [{"id": "b", "tags": ["review"]}]})
+
+    client = TestClient(create_app(paths))
+    resp = client.post("/a2a", json={
+        "jsonrpc": "2.0", "id": "1", "method": "registry/list", "params": {}
+    })
+    assert resp.status_code == 200
+    agents = resp.json()["result"]["agents"]
+    assert len(agents) >= 2
+    assert agents[0]["name"] == "alpha"
+
+
+def test_a2a_registry_get_returns_single_agent(hub_home):
+    from agenthub.registry import AgentRegistry
+
+    paths = HubPaths.from_workspace(hub_home)
+    init_db(paths)
+    svc = HubService(paths)
+    reg = AgentRegistry(svc)
+    reg.register("alpha", {"name": "alpha", "skills": [{"id": "a", "tags": ["code"]}]})
+
+    client = TestClient(create_app(paths))
+    resp = client.post("/a2a", json={
+        "jsonrpc": "2.0", "id": "1", "method": "registry/get",
+        "params": {"agentId": "alpha"}
+    })
+    assert resp.status_code == 200
+    agent = resp.json()["result"]["agent"]
+    assert agent["name"] == "alpha"

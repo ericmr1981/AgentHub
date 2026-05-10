@@ -25,6 +25,10 @@ class A2AHandler:
                 return self._handle_subscribe(req_id, params)
             elif method == "registry/register":
                 return self._handle_register(req_id, params)
+            elif method == "registry/list":
+                return self._handle_registry_list(req_id, params)
+            elif method == "registry/get":
+                return self._handle_registry_get(req_id, params)
             else:
                 return self._error(req_id, -32601, f"Method not found: {method}")
         except HubError as exc:
@@ -93,6 +97,20 @@ class A2AHandler:
         registry = AgentRegistry(self._svc)
         registry.register(agent_id, card)
         return self._ok(req_id, {"registered": agent_id})
+
+    def _handle_registry_list(self, req_id: str, params: dict) -> dict:
+        registry = AgentRegistry(self._svc)
+        return self._ok(req_id, {"agents": registry.list_all()})
+
+    def _handle_registry_get(self, req_id: str, params: dict) -> dict:
+        agent_id = params.get("agentId", "")
+        if not agent_id:
+            return self._error(req_id, -32602, "agentId is required")
+        registry = AgentRegistry(self._svc)
+        try:
+            return self._ok(req_id, {"agent": registry.lookup(agent_id)})
+        except HubError as exc:
+            return self._error(req_id, -32000, exc.message, exc.code)
 
     def _ok(self, req_id: str, result: dict) -> dict:
         return {"jsonrpc": "2.0", "id": req_id, "result": result}
